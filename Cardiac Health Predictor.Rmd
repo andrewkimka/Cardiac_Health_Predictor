@@ -1,0 +1,64 @@
+---
+title: "Cardiac Health Predictor"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+library(ISLR)
+library(tree)
+library(randomForest)
+library(gbm)
+
+#Set up the tree and check its attributes
+Cardiac=read.csv("C:/Users/Andrew/Desktop/Cardiac.csv")
+anyEvent=ifelse(Cardiac$any.event==0,"Yes","No")
+tree.Cardiac=tree(as.factor(anyEvent)~.,Cardiac)
+summary(tree.Cardiac)
+
+plot(tree.Cardiac)
+text(tree.Cardiac,pretty=0)
+
+#Train the model based on the data set
+#Correct forecast rate: 80.24%
+train=sample(1:nrow(Cardiac),229)
+Cardiac.test=Cardiac[-train,]
+anyEvent.test=anyEvent[-train]
+tree.Cardiac=tree(as.factor(anyEvent)~.,Cardiac,subset=train)
+tree.pred=predict(tree.Cardiac,Cardiac.test,type="class")
+table(tree.pred,anyEvent.test)
+
+#Prune the tree; optimal tree complexity = 16
+cv.Cardiac=cv.tree(tree.Cardiac,FUN=prune.misclass)
+par(mfrow=c(1,2))
+plot(cv.Cardiac$size,cv.Cardiac$dev,type="b",main="")
+plot(cv.Cardiac$k,cv.Cardiac$dev,type="b",main="")
+
+#Prune again with optimal tree complexity
+prune.Cardiac=prune.misclass(tree.Cardiac,best=16)
+plot(prune.Cardiac)
+text(prune.Cardiac,pretty=0)
+
+#Correct forecast rate: 90.27%
+tree.pred=predict(prune.Cardiac,Cardiac.test,type="class")
+table(tree.pred,anyEvent.test)
+
+#Apply random forest. MSE: 1.44%
+train=sample(1:nrow(Cardiac),nrow(Cardiac)/2)
+Cardiac.test=Cardiac[-train,"age"]
+rf.Cardiac=randomForest(age~.,data=Cardiac,subset=train,mtry=5,importance=TRUE)
+yhat.rf=predict(rf.Cardiac,newdata=Cardiac[-train,])
+mean((yhat.rf-Cardiac.test)^2)
+
+#Apply boostin. MSE: 3.27%
+boost.Cardiac=gbm(age~.,data=Cardiac[train,],distribution="gaussian",n.trees=5)
+yhat.boost=predict(boost.Cardiac,newdata=Cardiac[-train,],n.trees=5)
+mean((yhat.boost-Cardiac.test)^2)
+
+#Random forest vs. Original
+tree.Cardiac=tree(age~.,Cardiac,subset=train)
+Cardiac.pred=predict(tree.Cardiac,newdata=Cardiac[-train,])
+plot(Cardiac.pred,Cardiac.test,main="Andrew Kim")
+abline(0,1)
+
