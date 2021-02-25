@@ -5,11 +5,12 @@ output: word_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-```
+
 library(ISLR)
 library(tree)
 library(randomForest)
 library(gbm)
+```
 
 #Set up the tree and check its attributes
 Cardiac=read.csv("C:/Users/Andrew/Desktop/Cardiac.csv")
